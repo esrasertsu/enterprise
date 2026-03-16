@@ -1,0 +1,25 @@
+# macOS
+.DS_Store
+
+# Logs
+*.log
+
+# .NET build artifacts
+**/bin/
+**/obj/
+
+# IDE/editor
+.vs/
+.vscode/
+*.user
+*.suo
+
+# Node
+**/node_modules/
+**/dist/
+**/.vite/
+
+# Environment files
+.env
+.env.*
+!.env.example
