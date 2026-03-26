@@ -1,9 +1,10 @@
+using Ecommerce.Application.Abstractions.Persistence;
 using Ecommerce.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace Ecommerce.Infrastructure.Persistence;
 
-public class AppDbContext : DbContext
+public class AppDbContext : DbContext, IAppDbContext
 {
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
@@ -28,6 +29,7 @@ public class AppDbContext : DbContext
     public DbSet<InventoryReservation> InventoryReservations => Set<InventoryReservation>();
     public DbSet<OrderStatusHistory> OrderStatusHistories => Set<OrderStatusHistory>();
     public DbSet<PaymentWebhookLog> PaymentWebhookLogs => Set<PaymentWebhookLog>();
+    public DbSet<QuoteRequest> QuoteRequests => Set<QuoteRequest>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
