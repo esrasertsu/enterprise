@@ -1,10 +1,11 @@
 import { AppstoreOutlined, GlobalOutlined, MessageOutlined, ShoppingCartOutlined } from '@ant-design/icons'
 import { useQuery } from '@tanstack/react-query'
-import { Badge, Button, Segmented } from 'antd'
+import { Badge, Button, Select } from 'antd'
 import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { fetchCart } from '../../lib/api/cart'
 import { getOrCreateCartSessionId } from '../../lib/cartSession'
+import { normalizeStorefrontLanguageCode, storefrontLanguageOptions } from '../../lib/locales'
 import { openQuoteDrawer } from '../../lib/quoteDrawerStore'
 
 function SiteHeader() {
@@ -12,6 +13,7 @@ function SiteHeader() {
   const navigate = useNavigate()
   const location = useLocation()
   const sessionId = getOrCreateCartSessionId()
+  const activeLanguage = normalizeStorefrontLanguageCode(i18n.language)
 
   const isProductsPage = location.pathname.startsWith('/products')
   const isCartPage = location.pathname.startsWith('/cart')
@@ -38,13 +40,19 @@ function SiteHeader() {
       </nav>
 
       <div className="site-header__actions">
-        <Segmented<string>
-          value={i18n.language}
-          options={[
-            { label: 'EN', value: 'en' },
-            { label: 'TR', value: 'tr' },
-          ]}
-          onChange={(value) => i18n.changeLanguage(value)}
+        <Select
+          aria-label={t('common.language')}
+          className="site-header__language-select"
+          popupMatchSelectWidth={false}
+          suffixIcon={<GlobalOutlined />}
+          value={activeLanguage}
+          options={storefrontLanguageOptions.map((option) => ({
+            label: `${option.label} (${option.shortLabel})`,
+            value: option.value,
+          }))}
+          onChange={(value) => {
+            void i18n.changeLanguage(value)
+          }}
         />
         <Button
           icon={<AppstoreOutlined />}
@@ -65,9 +73,6 @@ function SiteHeader() {
             {t('nav.cart')}
           </Button>
         </Badge>
-        <Button className="site-header__locale-chip" icon={<GlobalOutlined />} type="text">
-          {t('common.language')}
-        </Button>
       </div>
     </header>
   )

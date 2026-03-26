@@ -29,39 +29,15 @@ public sealed class LocalFileStorage : IFileStorage
         FileStorageUpload upload,
         CancellationToken cancellationToken = default)
     {
-        var extension = Path.GetExtension(upload.OriginalFileName);
-        if (string.IsNullOrWhiteSpace(extension))
-        {
-            extension = upload.ContentType switch
-            {
-                "image/png" => ".png",
-                "image/webp" => ".webp",
-                "image/gif" => ".gif",
-                _ => ".jpg",
-            };
-        }
+        return await SaveImageAsync(new[] { "products", productId.ToString("N") }, upload, cancellationToken);
+    }
 
-        var safeExtension = InvalidFileNameChars.Replace(extension.ToLowerInvariant(), string.Empty);
-        var relativeSegments = new[] { "products", productId.ToString("N") };
-        var targetDirectory = Path.Combine(_hostEnvironment.ContentRootPath, _options.UploadRoot, Path.Combine(relativeSegments));
-
-        Directory.CreateDirectory(targetDirectory);
-
-        var storedFileName = $"{Guid.NewGuid():N}{safeExtension}";
-        var fullPath = Path.Combine(targetDirectory, storedFileName);
-
-        await using (var fileStream = File.Create(fullPath))
-        {
-            await upload.Content.CopyToAsync(fileStream, cancellationToken);
-        }
-
-        var relativeUrlPath = $"/uploads/{string.Join('/', relativeSegments)}/{storedFileName}";
-        var publicBaseUrl = _options.PublicBaseUrl.TrimEnd('/');
-        var publicUrl = string.IsNullOrWhiteSpace(publicBaseUrl)
-            ? relativeUrlPath
-            : $"{publicBaseUrl}{relativeUrlPath}";
-
-        return new FileStorageResult(publicUrl, storedFileName, upload.Length, upload.ContentType);
+    public async Task<FileStorageResult> SaveCategoryImageAsync(
+        Guid categoryId,
+        FileStorageUpload upload,
+        CancellationToken cancellationToken = default)
+    {
+        return await SaveImageAsync(new[] { "categories", categoryId.ToString("N") }, upload, cancellationToken);
     }
 
     public Task DeleteAsync(string fileUrl, CancellationToken cancellationToken = default)
@@ -81,6 +57,45 @@ public sealed class LocalFileStorage : IFileStorage
         }
 
         return Task.CompletedTask;
+    }
+
+    private async Task<FileStorageResult> SaveImageAsync(
+        IReadOnlyList<string> relativeSegments,
+        FileStorageUpload upload,
+        CancellationToken cancellationToken)
+    {
+        var extension = Path.GetExtension(upload.OriginalFileName);
+        if (string.IsNullOrWhiteSpace(extension))
+        {
+            extension = upload.ContentType switch
+            {
+                "image/png" => ".png",
+                "image/webp" => ".webp",
+                "image/gif" => ".gif",
+                _ => ".jpg",
+            };
+        }
+
+        var safeExtension = InvalidFileNameChars.Replace(extension.ToLowerInvariant(), string.Empty);
+        var targetDirectory = Path.Combine(_hostEnvironment.ContentRootPath, _options.UploadRoot, Path.Combine(relativeSegments.ToArray()));
+
+        Directory.CreateDirectory(targetDirectory);
+
+        var storedFileName = $"{Guid.NewGuid():N}{safeExtension}";
+        var fullPath = Path.Combine(targetDirectory, storedFileName);
+
+        await using (var fileStream = File.Create(fullPath))
+        {
+            await upload.Content.CopyToAsync(fileStream, cancellationToken);
+        }
+
+        var relativeUrlPath = $"/uploads/{string.Join('/', relativeSegments)}/{storedFileName}";
+        var publicBaseUrl = _options.PublicBaseUrl.TrimEnd('/');
+        var publicUrl = string.IsNullOrWhiteSpace(publicBaseUrl)
+            ? relativeUrlPath
+            : $"{publicBaseUrl}{relativeUrlPath}";
+
+        return new FileStorageResult(publicUrl, storedFileName, upload.Length, upload.ContentType);
     }
 
     private string? TryGetRelativePath(string fileUrl)

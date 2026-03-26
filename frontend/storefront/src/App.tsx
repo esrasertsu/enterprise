@@ -1,12 +1,15 @@
 import { lazy, Suspense } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { App as AntApp, ConfigProvider, Spin, theme as antdTheme } from 'antd'
+import deDE from 'antd/locale/de_DE'
 import enUS from 'antd/locale/en_US'
+import frFR from 'antd/locale/fr_FR'
 import trTR from 'antd/locale/tr_TR'
 import { useTranslation } from 'react-i18next'
 import SiteHeader from './components/layout/SiteHeader'
 import SiteFooter from './components/layout/SiteFooter'
 import QuoteRequestDrawer from './components/quote/QuoteRequestDrawer'
+import { normalizeStorefrontLanguageCode } from './lib/locales'
 
 const HomePage = lazy(() => import('./pages/HomePage'))
 const CatalogPage = lazy(() => import('./pages/CatalogPage'))
@@ -16,13 +19,16 @@ const CheckoutPage = lazy(() => import('./pages/CheckoutPage'))
 const CheckoutSuccessPage = lazy(() => import('./pages/CheckoutSuccessPage'))
 
 const antLocales = {
+  de: deDE,
   en: enUS,
+  fr: frFR,
+  lb: deDE,
   tr: trTR,
 }
 
 function App() {
   const { i18n } = useTranslation()
-  const locale = antLocales[i18n.language as keyof typeof antLocales] ?? enUS
+  const locale = antLocales[normalizeStorefrontLanguageCode(i18n.language)] ?? enUS
 
   return (
     <ConfigProvider

@@ -5,17 +5,57 @@ import type {
   AdminProductDetail,
   AdminProductImage,
   AdminProductListItem,
+  AdminProductTranslation,
   CreatedProductResponse,
   ProductAttributeForm,
   ProductFormState,
   ProductTranslationForm,
   ProductVariantForm,
 } from '../types/admin'
+import { useAdminI18n } from '../lib/adminI18n'
+import { getLanguageLabel, getNextTranslationLanguageCode, renderLanguageOptions, translationLanguageOptions } from '../lib/translationLanguages'
 
 const productTypeOptions = [
   { value: '1', label: 'Standard' },
   { value: '2', label: 'Custom printed' },
 ]
+
+function createDefaultTranslations(): ProductTranslationForm[] {
+  return translationLanguageOptions.map((option) => createEmptyTranslation(option.value))
+}
+
+function mergeTranslationsWithDefaults(translations: AdminProductTranslation[] | undefined): ProductTranslationForm[] {
+  const existingTranslations = translations ?? []
+  const existingByLanguageCode = new Map(
+    existingTranslations.map((translation) => [translation.languageCode.trim().toLowerCase(), translation]),
+  )
+
+  const mergedTranslations = translationLanguageOptions.map((option) => {
+    const existingTranslation = existingByLanguageCode.get(option.value)
+
+    return {
+      languageCode: option.value,
+      name: existingTranslation?.name ?? '',
+      shortDescription: existingTranslation?.shortDescription ?? '',
+      description: existingTranslation?.description ?? '',
+      seoTitle: existingTranslation?.seoTitle ?? '',
+      seoDescription: existingTranslation?.seoDescription ?? '',
+    }
+  })
+
+  const customTranslations = existingTranslations
+    .filter((translation) => !translationLanguageOptions.some((option) => option.value === translation.languageCode.trim().toLowerCase()))
+    .map((translation) => ({
+      languageCode: translation.languageCode ?? '',
+      name: translation.name ?? '',
+      shortDescription: translation.shortDescription ?? '',
+      description: translation.description ?? '',
+      seoTitle: translation.seoTitle ?? '',
+      seoDescription: translation.seoDescription ?? '',
+    }))
+
+  return [...mergedTranslations, ...customTranslations]
+}
 
 function createEmptyTranslation(languageCode = 'en'): ProductTranslationForm {
   return {
@@ -71,7 +111,7 @@ function createEmptyProductForm(): ProductFormState {
     originCountry: '',
     recyclable: false,
     foodSafe: false,
-    translations: [createEmptyTranslation('en'), createEmptyTranslation('tr')],
+    translations: createDefaultTranslations(),
     variants: [createEmptyVariant(1)],
     attributes: [],
   }
@@ -97,16 +137,7 @@ function mapProductDetailToForm(product: AdminProductDetail): ProductFormState {
     originCountry: product.originCountry ?? '',
     recyclable: Boolean(product.recyclable),
     foodSafe: Boolean(product.foodSafe),
-    translations: product.translations?.length
-      ? product.translations.map((translation) => ({
-          languageCode: translation.languageCode ?? '',
-          name: translation.name ?? '',
-          shortDescription: translation.shortDescription ?? '',
-          description: translation.description ?? '',
-          seoTitle: translation.seoTitle ?? '',
-          seoDescription: translation.seoDescription ?? '',
-        }))
-      : [createEmptyTranslation('en')],
+    translations: mergeTranslationsWithDefaults(product.translations),
     variants: product.variants?.length
       ? product.variants.map((variant, index) => ({
           sku: variant.sku ?? '',
@@ -226,6 +257,7 @@ async function readErrorMessage(response: Response, fallbackMessage: string): Pr
 }
 
 function ProductsPage() {
+  const { t } = useAdminI18n()
   const [products, setProducts] = useState<AdminProductListItem[]>([])
   const [categories, setCategories] = useState<AdminCategoryOption[]>([])
   const [selectedProductId, setSelectedProductId] = useState('')
@@ -383,7 +415,7 @@ function ProductsPage() {
   function addTranslation() {
     setProductForm((current) => ({
       ...current,
-      translations: [...current.translations, createEmptyTranslation()],
+      translations: [...current.translations, createEmptyTranslation(getNextTranslationLanguageCode(current.translations))],
     }))
   }
 
@@ -485,7 +517,7 @@ function ProductsPage() {
   }
 
   async function handleDeleteProduct() {
-    if (!selectedProductId || !window.confirm('Delete this product?')) {
+    if (!selectedProductId || !window.confirm(t('products.deleteConfirm'))) {
       return
     }
 
@@ -722,27 +754,27 @@ function ProductsPage() {
   return (
     <main className="admin-shell">
       <section className="admin-hero">
-        <span className="admin-hero__eyebrow">Admin Catalog</span>
-        <h1>Product Editor</h1>
-        <p>Admin panelinden urun olustur, guncelle, varyantlarini duzenle, teknik alanlarini doldur ve kaydettikten sonra resimlerini yonet.</p>
+        <span className="admin-hero__eyebrow">{t('products.heroEyebrow')}</span>
+        <h1>{t('products.heroTitle')}</h1>
+        <p>{t('products.heroDescription')}</p>
       </section>
 
       <section className="admin-layout">
         <aside className="panel product-sidebar">
           <div className="panel__header panel__header--stacked">
             <div>
-              <h2>Products</h2>
+              <h2>{t('products.listTitle')}</h2>
               <span>{products.length} total</span>
             </div>
-            <button type="button" className="primary-button" onClick={startCreateProduct}>New product</button>
+            <button type="button" className="primary-button" onClick={startCreateProduct}>{t('products.new')}</button>
           </div>
 
           {isLoadingProducts ? <p>Loading products...</p> : null}
 
           <label className="field">
-            <span>Select product</span>
+            <span>{t('products.select')}</span>
             <select value={selectedProductId} onChange={(event) => setSelectedProductId(event.target.value)}>
-              <option value="">Create new product</option>
+              <option value="">{t('products.create')}</option>
               {products.map((product) => (
                 <option key={product.id} value={product.id}>{product.displayName}</option>
               ))}
@@ -769,12 +801,12 @@ function ProductsPage() {
           <section className="panel">
             <div className="panel__header">
               <div>
-                <h2>{isCreateMode ? 'Create product' : 'Edit product'}</h2>
-                <span>{isCreateMode ? 'Yeni urun tanimi' : selectedProduct?.slug}</span>
+                <h2>{isCreateMode ? t('products.create') : t('products.edit')}</h2>
+                <span>{isCreateMode ? t('products.createSubtitle') : selectedProduct?.slug}</span>
               </div>
               {!isCreateMode ? (
                 <button type="button" className="danger-button" onClick={handleDeleteProduct} disabled={isDeletingProduct || isSavingProduct}>
-                  {isDeletingProduct ? 'Deleting...' : 'Delete product'}
+                  {isDeletingProduct ? 'Deleting...' : t('products.delete')}
                 </button>
               ) : null}
             </div>
@@ -782,7 +814,7 @@ function ProductsPage() {
             <form className="product-form" onSubmit={handleSaveProduct}>
               <div className="form-section">
                 <div className="form-section__header">
-                  <h3>General</h3>
+                  <h3>{t('products.general')}</h3>
                 </div>
                 <div className="form-grid form-grid--general">
                   <label className="field">
@@ -870,14 +902,21 @@ function ProductsPage() {
 
               <div className="form-section">
                 <div className="form-section__header">
-                  <h3>Translations</h3>
-                  <button type="button" className="secondary-button" onClick={addTranslation}>Add translation</button>
+                  <h3>{t('products.translations')}</h3>
+                  <button type="button" className="secondary-button" onClick={addTranslation}>{t('products.addTranslation')}</button>
                 </div>
                 <div className="stack-list">
-                  {productForm.translations.map((translation, index) => (
+                  {(() => {
+                    const usedTranslationLanguages = new Set(
+                      productForm.translations
+                        .map((translation) => translation.languageCode.trim().toLowerCase())
+                        .filter(Boolean),
+                    )
+
+                    return productForm.translations.map((translation, index) => (
                     <div key={`${translation.languageCode}-${index}`} className="subform-card">
                       <div className="subform-card__header">
-                        <strong>Translation #{index + 1}</strong>
+                        <strong>{translation.languageCode ? getLanguageLabel(translation.languageCode.trim().toLowerCase()) : `Translation #${index + 1}`}</strong>
                         {productForm.translations.length > 1 ? (
                           <button type="button" className="ghost-button" onClick={() => removeTranslation(index)}>Remove</button>
                         ) : null}
@@ -885,7 +924,9 @@ function ProductsPage() {
                       <div className="form-grid">
                         <label className="field">
                           <span>Language code</span>
-                          <input value={translation.languageCode} onChange={(event) => updateTranslation(index, 'languageCode', event.target.value)} placeholder="en" />
+                          <select value={translation.languageCode} onChange={(event) => updateTranslation(index, 'languageCode', event.target.value)}>
+                            {renderLanguageOptions(translation.languageCode, usedTranslationLanguages)}
+                          </select>
                         </label>
                         <label className="field">
                           <span>Name</span>
@@ -909,14 +950,15 @@ function ProductsPage() {
                         </label>
                       </div>
                     </div>
-                  ))}
+                    ))
+                  })()}
                 </div>
               </div>
 
               <div className="form-section">
                 <div className="form-section__header">
-                  <h3>Variants</h3>
-                  <button type="button" className="secondary-button" onClick={addVariant}>Add variant</button>
+                  <h3>{t('products.variants')}</h3>
+                  <button type="button" className="secondary-button" onClick={addVariant}>{t('products.addVariant')}</button>
                 </div>
                 <div className="stack-list">
                   {productForm.variants.map((variant, index) => (
@@ -968,8 +1010,8 @@ function ProductsPage() {
 
               <div className="form-section">
                 <div className="form-section__header">
-                  <h3>Attributes</h3>
-                  <button type="button" className="secondary-button" onClick={addAttribute}>Add attribute</button>
+                  <h3>{t('products.attributes')}</h3>
+                  <button type="button" className="secondary-button" onClick={addAttribute}>{t('products.addAttribute')}</button>
                 </div>
                 <div className="stack-list">
                   {productForm.attributes.length === 0 ? (
@@ -996,7 +1038,9 @@ function ProductsPage() {
                         </label>
                         <label className="field">
                           <span>Language code</span>
-                          <input value={attribute.languageCode} onChange={(event) => updateAttribute(index, 'languageCode', event.target.value)} placeholder="en" />
+                          <select value={attribute.languageCode} onChange={(event) => updateAttribute(index, 'languageCode', event.target.value)}>
+                            {renderLanguageOptions(attribute.languageCode, new Set<string>(), true)}
+                          </select>
                         </label>
                         <label className="field">
                           <span>Sort order</span>
@@ -1014,7 +1058,7 @@ function ProductsPage() {
 
               <div className="form-actions">
                 <button type="submit" className="primary-button" disabled={isSavingProduct || isDeletingProduct || isLoadingCategories}>
-                  {isSavingProduct ? 'Saving...' : isCreateMode ? 'Create product' : 'Update product'}
+                  {isSavingProduct ? 'Saving...' : isCreateMode ? t('products.create') : t('products.edit')}
                 </button>
               </div>
             </form>
@@ -1026,7 +1070,7 @@ function ProductsPage() {
           <section className="panel">
             <div className="panel__header">
               <div>
-                <h2>Images</h2>
+                <h2>{t('products.images')}</h2>
                 <span>{selectedProductId ? `${sortedImages.length} files` : 'Save the product first'}</span>
               </div>
             </div>

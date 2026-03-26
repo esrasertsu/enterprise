@@ -3,6 +3,7 @@ import { Button, Result, Space } from 'antd'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { formatCurrency } from '../lib/formatters'
+import { resolveDateLocale } from '../lib/locales'
 import type { CreatedOrder } from '../types/api'
 
 function CheckoutSuccessPage() {
@@ -22,7 +23,7 @@ function CheckoutSuccessPage() {
       orderNumber,
       totalLabel: formatCurrency(total, i18n.language) ?? '—',
       createdAtLabel: createdAt
-        ? new Intl.DateTimeFormat(i18n.language === 'tr' ? 'tr-TR' : 'en-GB', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(createdAt))
+        ? new Intl.DateTimeFormat([resolveDateLocale(i18n.language), 'en-GB'], { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(createdAt))
         : '—',
       currencyCode,
     }

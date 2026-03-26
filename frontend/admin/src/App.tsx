@@ -1,24 +1,27 @@
 import { useMemo } from 'react'
 import { NavLink, Navigate, Outlet, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import './App.css'
+import { useAdminI18n } from './lib/adminI18n'
+import CategoriesPage from './pages/CategoriesPage'
 import OrdersPage from './pages/OrdersPage'
 import ProductsPage from './pages/ProductsPage'
 
-type AdminSection = 'dashboard' | 'orders' | 'products' | 'customers' | 'sales'
+type AdminSection = 'dashboard' | 'categories' | 'orders' | 'products' | 'customers' | 'sales'
 
 interface MenuItem {
   id: AdminSection
-  label: string
-  eyebrow: string
+  labelKey: string
+  eyebrowKey: string
   path: string
 }
 
 const menuItems: MenuItem[] = [
-  { id: 'dashboard', label: 'Dashboard', eyebrow: 'Overview', path: '/' },
-  { id: 'orders', label: 'Siparisler', eyebrow: 'Fulfillment', path: '/orders' },
-  { id: 'products', label: 'Urunler', eyebrow: 'Catalog', path: '/products' },
-  { id: 'customers', label: 'Musteriler', eyebrow: 'Accounts', path: '/customers' },
-  { id: 'sales', label: 'Satis takibi', eyebrow: 'Revenue', path: '/sales' },
+  { id: 'dashboard', labelKey: 'menu.dashboard', eyebrowKey: 'menu.overview', path: '/' },
+  { id: 'categories', labelKey: 'menu.categories', eyebrowKey: 'menu.catalog', path: '/categories' },
+  { id: 'orders', labelKey: 'menu.orders', eyebrowKey: 'menu.fulfillment', path: '/orders' },
+  { id: 'products', labelKey: 'menu.products', eyebrowKey: 'menu.catalog', path: '/products' },
+  { id: 'customers', labelKey: 'menu.customers', eyebrowKey: 'menu.accounts', path: '/customers' },
+  { id: 'sales', labelKey: 'menu.sales', eyebrowKey: 'menu.revenue', path: '/sales' },
 ]
 
 interface SectionCardProps {
@@ -63,6 +66,8 @@ interface PlaceholderPageProps {
 }
 
 function PlaceholderPage({ title, eyebrow, description }: PlaceholderPageProps) {
+  const { t } = useAdminI18n()
+
   return (
     <section className="dashboard-page">
       <header className="dashboard-page__hero">
@@ -73,12 +78,12 @@ function PlaceholderPage({ title, eyebrow, description }: PlaceholderPageProps) 
 
       <div className="dashboard-placeholder-grid">
         <article className="placeholder-card">
-          <h3>Hazir moduller</h3>
-          <p>Bu alan siparis akislari, musteri segmentleri veya gelir panelleri icin ayrildi. Products ekrani su an aktif calisan moduldur.</p>
+          <h3>{t('placeholders.modulesReady')}</h3>
+          <p>{t('placeholders.modulesReadyDesc')}</p>
         </article>
         <article className="placeholder-card">
-          <h3>Sonraki adim</h3>
-          <p>Bu bolume backend endpoint'leri geldikce liste, filtre ve detay kartlari ayni dashboard diliyle eklenebilir.</p>
+          <h3>{t('placeholders.nextStep')}</h3>
+          <p>{t('placeholders.nextStepDesc')}</p>
         </article>
       </div>
     </section>
@@ -90,24 +95,26 @@ interface DashboardHomeProps {
 }
 
 function DashboardHome({ onNavigate }: DashboardHomeProps) {
+  const { t } = useAdminI18n()
+
   const stats = useMemo(
     () => [
-      { title: 'Aktif moduller', value: '5', detail: 'Dashboard, siparisler, urunler, musteriler ve satis takibi icin ayri girisler hazir.' },
-      { title: 'Urun operasyonu', value: 'Canli', detail: 'Mevcut urun editoru yan menu altinda korunuyor ve aninda erisilebilir durumda.' },
-      { title: 'Sonraki teslim', value: 'Orders', detail: 'Siradaki mantikli modul siparis listesi ve durum takibi ekrani.' },
+      { title: t('dashboard.statsModules'), value: '6', detail: t('dashboard.statsModulesDetail') },
+      { title: t('dashboard.statsCatalog'), value: 'Live', detail: t('dashboard.statsCatalogDetail') },
+      { title: t('dashboard.statsNext'), value: t('menu.orders'), detail: t('dashboard.statsNextDetail') },
     ],
-    [],
+    [t],
   )
 
   return (
     <section className="dashboard-page">
       <header className="dashboard-page__hero dashboard-page__hero--accent">
         <div>
-          <span className="dashboard-page__eyebrow">Admin home</span>
-          <h1>Operasyon merkezini tek yerden yonet.</h1>
-          <p>Soldaki menu artik admin icin ana giris oldu. Products modulu mevcut editoru aynen koruyor; diger alanlar da ayni kabuk icinde buyuyebilir.</p>
+          <span className="dashboard-page__eyebrow">{t('dashboard.eyebrow')}</span>
+          <h1>{t('dashboard.title')}</h1>
+          <p>{t('dashboard.description')}</p>
         </div>
-        <button type="button" className="primary-button" onClick={() => onNavigate('products')}>Products paneline git</button>
+        <button type="button" className="primary-button" onClick={() => onNavigate('products')}>{t('dashboard.cta')}</button>
       </header>
 
       <div className="dashboard-stats-grid">
@@ -118,21 +125,27 @@ function DashboardHome({ onNavigate }: DashboardHomeProps) {
 
       <div className="dashboard-modules-grid">
         <ModuleCard
-          title="Catalog management"
-          description="Mevcut urun olusturma, guncelleme, varyant, attribute ve gorsel yonetimi bu modulde duruyor. Sol menuden Products ile aciliyor."
-          actionLabel="Products"
+          title={t('dashboard.moduleCategories')}
+          description={t('dashboard.moduleCategoriesDesc')}
+          actionLabel={t('menu.categories')}
+          onAction={() => onNavigate('categories')}
+        />
+        <ModuleCard
+          title={t('dashboard.moduleProducts')}
+          description={t('dashboard.moduleProductsDesc')}
+          actionLabel={t('menu.products')}
           onAction={() => onNavigate('products')}
         />
         <ModuleCard
-          title="Order operations"
-          description="Siparis listeleme, durum degisimi ve fulfillment timeline'i icin ayrilmis alan."
-          actionLabel="Siparisler"
+          title={t('dashboard.moduleOrders')}
+          description={t('dashboard.moduleOrdersDesc')}
+          actionLabel={t('menu.orders')}
           onAction={() => onNavigate('orders')}
         />
         <ModuleCard
-          title="Sales visibility"
-          description="Gunluk hacim, tekliften siparise donusum ve kategori bazli satis takibi icin temel alan."
-          actionLabel="Satis takibi"
+          title={t('dashboard.moduleSales')}
+          description={t('dashboard.moduleSalesDesc')}
+          actionLabel={t('menu.sales')}
           onAction={() => onNavigate('sales')}
         />
       </div>
@@ -142,8 +155,13 @@ function DashboardHome({ onNavigate }: DashboardHomeProps) {
 
 function AdminLayout() {
   const location = useLocation()
+  const { languageOptions, locale, setLocale, t } = useAdminI18n()
 
   const activeSection = useMemo<AdminSection>(() => {
+    if (location.pathname.startsWith('/categories')) {
+      return 'categories'
+    }
+
     if (location.pathname.startsWith('/orders')) {
       return 'orders'
     }
@@ -169,8 +187,8 @@ function AdminLayout() {
         <div className="app-sidebar__brand">
           <span className="app-sidebar__badge">EA</span>
           <div>
-            <strong>Ecommerce Admin</strong>
-            <small>packaging operations</small>
+            <strong>{t('shell.brand')}</strong>
+            <small>{t('shell.tagline')}</small>
           </div>
         </div>
 
@@ -182,27 +200,37 @@ function AdminLayout() {
               end={item.path === '/'}
               className={({ isActive }) => `app-nav-item${isActive ? ' app-nav-item--active' : ''}`}
             >
-              <span>{item.eyebrow}</span>
-              <strong>{item.label}</strong>
+              <span>{t(item.eyebrowKey)}</span>
+              <strong>{t(item.labelKey)}</strong>
             </NavLink>
           ))}
         </nav>
 
         <div className="app-sidebar__footer">
-          <span>Current focus</span>
-          <strong>{menuItems.find((item) => item.id === activeSection)?.label}</strong>
+          <span>{t('shell.currentFocus')}</span>
+          <strong>{t(menuItems.find((item) => item.id === activeSection)?.labelKey ?? 'menu.dashboard')}</strong>
         </div>
       </aside>
 
       <section className="app-content">
         <header className="app-content__topbar">
           <div>
-            <span className="app-content__eyebrow">Admin workspace</span>
-            <h2>{menuItems.find((item) => item.id === activeSection)?.label}</h2>
+            <span className="app-content__eyebrow">{t('shell.workspace')}</span>
+            <h2>{t(menuItems.find((item) => item.id === activeSection)?.labelKey ?? 'menu.dashboard')}</h2>
           </div>
-          <div className="app-content__status">
-            <span>Frontend</span>
-            <strong>TSX layout active</strong>
+          <div className="app-content__actions">
+            <label className="app-language-select">
+              <span>{t('shell.language')}</span>
+              <select value={locale} onChange={(event) => setLocale(event.target.value)}>
+                {languageOptions.map((option) => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
+              </select>
+            </label>
+            <div className="app-content__status">
+              <span>{t('shell.frontend')}</span>
+              <strong>{t('shell.layoutActive')}</strong>
+            </div>
           </div>
         </header>
 
@@ -218,19 +246,22 @@ function DashboardHomeRoute() {
 }
 
 function App() {
+  const { t } = useAdminI18n()
+
   return (
     <Routes>
       <Route element={<AdminLayout />}>
         <Route index element={<DashboardHomeRoute />} />
+        <Route path="categories" element={<CategoriesPage />} />
         <Route path="orders" element={<OrdersPage />} />
         <Route path="products" element={<ProductsPage />} />
         <Route
           path="customers"
           element={(
             <PlaceholderPage
-              title="Musteriler"
-              eyebrow="CRM"
-              description="Musteri profilleri, adresler, siparis gecmisi ve teklif etkilesimi bu alanda toplanabilir."
+              title={t('placeholders.customersTitle')}
+              eyebrow={t('placeholders.customersEyebrow')}
+              description={t('placeholders.customersDesc')}
             />
           )}
         />
@@ -238,9 +269,9 @@ function App() {
           path="sales"
           element={(
             <PlaceholderPage
-              title="Satis takibi"
-              eyebrow="Analytics"
-              description="Kategori bazli hacim, teklif donusumleri ve kanal performansi gibi KPI panelleri icin yer ayrildi."
+              title={t('placeholders.salesTitle')}
+              eyebrow={t('placeholders.salesEyebrow')}
+              description={t('placeholders.salesDesc')}
             />
           )}
         />

@@ -19,14 +19,22 @@ public sealed class PublicProductQueryService
     {
         var normalizedLanguageCode = NormalizeLanguageCode(languageCode);
         var normalizedCategorySlug = string.IsNullOrWhiteSpace(categorySlug) ? null : categorySlug.Trim().ToLowerInvariant();
+        var categoryIds = normalizedCategorySlug is null
+            ? null
+            : await ResolveCategoryIdsAsync(normalizedCategorySlug, cancellationToken);
 
         var query = _dbContext.Products
             .AsNoTracking()
             .Where(product => product.IsActive);
 
-        if (!string.IsNullOrWhiteSpace(normalizedCategorySlug))
+        if (!string.IsNullOrWhiteSpace(normalizedCategorySlug) && categoryIds is { Count: 0 })
         {
-            query = query.Where(product => product.Category.Slug == normalizedCategorySlug);
+            return [];
+        }
+
+        if (categoryIds is { Count: > 0 })
+        {
+            query = query.Where(product => categoryIds.Contains(product.CategoryId));
         }
 
         return await query
@@ -160,4 +168,39 @@ public sealed class PublicProductQueryService
             ? "tr"
             : languageCode.Trim().ToLowerInvariant();
     }
+
+    private async Task<IReadOnlySet<Guid>> ResolveCategoryIdsAsync(string categorySlug, CancellationToken cancellationToken)
+    {
+        var categories = await _dbContext.Categories
+            .AsNoTracking()
+            .Select(category => new CategoryLookupItem(category.Id, category.ParentCategoryId, category.Slug))
+            .ToListAsync(cancellationToken);
+
+        var selectedCategory = categories.FirstOrDefault(category => category.Slug == categorySlug);
+        if (selectedCategory is null)
+        {
+            return new HashSet<Guid>();
+        }
+
+        var categoryIds = new HashSet<Guid> { selectedCategory.Id };
+        var queue = new Queue<Guid>();
+        queue.Enqueue(selectedCategory.Id);
+
+        while (queue.Count > 0)
+        {
+            var currentId = queue.Dequeue();
+
+            foreach (var child in categories.Where(category => category.ParentCategoryId == currentId))
+            {
+                if (categoryIds.Add(child.Id))
+                {
+                    queue.Enqueue(child.Id);
+                }
+            }
+        }
+
+        return categoryIds;
+    }
+
+    private sealed record CategoryLookupItem(Guid Id, Guid? ParentCategoryId, string Slug);
 }

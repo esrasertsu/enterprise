@@ -5,6 +5,48 @@ export interface AdminCategoryOption {
   isActive: boolean
 }
 
+export interface AdminCategoryTranslation {
+  languageCode: string
+  name: string
+  description: string | null
+  seoTitle: string | null
+  seoDescription: string | null
+}
+
+export interface AdminCategoryDetail {
+  id: string
+  parentCategoryId: string | null
+  parentCategoryName: string | null
+  slug: string
+  isActive: boolean
+  sortOrder: number
+  imageUrl: string | null
+  translations: AdminCategoryTranslation[]
+  createdAt: string
+  updatedAt: string
+}
+
+export interface CategoryTranslationForm {
+  languageCode: string
+  name: string
+  description: string
+  seoTitle: string
+  seoDescription: string
+}
+
+export interface CategoryFormState {
+  parentCategoryId: string
+  slug: string
+  isActive: boolean
+  sortOrder: string
+  imageUrl: string
+  translations: CategoryTranslationForm[]
+}
+
+export interface CreatedCategoryResponse {
+  id: string
+}
+
 export interface AdminProductListItem {
   id: string
   slug: string

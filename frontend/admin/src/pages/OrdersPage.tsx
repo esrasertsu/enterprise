@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useAdminI18n } from '../lib/adminI18n'
 import type { AdminOrderListItem } from '../types/admin'
 
 const orderStatusLabels: Record<number, string> = {
@@ -30,8 +31,8 @@ const fulfillmentStatusLabels: Record<number, string> = {
   5: 'Returned',
 }
 
-function formatMoney(amount: number, currencyCode: string) {
-  return new Intl.NumberFormat('en-GB', {
+function formatMoney(amount: number, currencyCode: string, locale: string) {
+  return new Intl.NumberFormat(locale, {
     style: 'currency',
     currency: currencyCode || 'EUR',
     maximumFractionDigits: 2,
@@ -39,6 +40,7 @@ function formatMoney(amount: number, currencyCode: string) {
 }
 
 function OrdersPage() {
+  const { intlLocale, t } = useAdminI18n()
   const [orders, setOrders] = useState<AdminOrderListItem[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
@@ -72,20 +74,20 @@ function OrdersPage() {
     const designSupportOrders = orders.filter((order) => order.needsDesignSupport).length
 
     return [
-      { label: 'Toplam siparis', value: String(orders.length), detail: 'Gercek order tablosundan okunuyor.' },
-      { label: 'Acilik bekleyen', value: String(openOrders), detail: 'Teslim veya iade disindaki hareketli siparisler.' },
-      { label: 'Ciro', value: formatMoney(totalRevenue, orders[0]?.currencyCode ?? 'EUR'), detail: 'Listelenen siparislerin toplam tutari.' },
-      { label: 'Tasarim destekli', value: String(designSupportOrders), detail: 'Artwork veya tasarim koordinasyonu isteyen siparisler.' },
+      { label: t('orders.totalOrders'), value: String(orders.length), detail: t('orders.totalOrdersDetail') },
+      { label: t('orders.openOrders'), value: String(openOrders), detail: t('orders.openOrdersDetail') },
+      { label: t('orders.revenue'), value: formatMoney(totalRevenue, orders[0]?.currencyCode ?? 'EUR', intlLocale), detail: t('orders.revenueDetail') },
+      { label: t('orders.designSupport'), value: String(designSupportOrders), detail: t('orders.designSupportDetail') },
     ]
-  }, [orders])
+  }, [intlLocale, orders, t])
 
   return (
     <section className="dashboard-page orders-page">
       <header className="dashboard-page__hero">
         <div>
-          <span className="dashboard-page__eyebrow">Operations</span>
-          <h1>Siparisler</h1>
-          <p>Bu ekran artik gercek order verisini backend’den cekiyor. Durum, odeme, fulfillment ve siparis hacmini ayni panelde gorebilirsin.</p>
+          <span className="dashboard-page__eyebrow">{t('orders.eyebrow')}</span>
+          <h1>{t('orders.title')}</h1>
+          <p>{t('orders.description')}</p>
         </div>
       </header>
 
@@ -102,8 +104,8 @@ function OrdersPage() {
       <section className="panel orders-panel">
         <div className="panel__header panel__header--stacked">
           <div>
-            <h2>Order stream</h2>
-            <span>{orders.length} siparis</span>
+            <h2>{t('orders.streamTitle')}</h2>
+            <span>{orders.length} {t('orders.countLabel')}</span>
           </div>
         </div>
 
@@ -122,14 +124,14 @@ function OrdersPage() {
             <table className="orders-table">
               <thead>
                 <tr>
-                  <th>No</th>
-                  <th>Musteri</th>
-                  <th>Satir</th>
-                  <th>Tutar</th>
-                  <th>Order</th>
-                  <th>Odeme</th>
-                  <th>Fulfillment</th>
-                  <th>Tarih</th>
+                  <th>{t('orders.columnsNumber')}</th>
+                  <th>{t('orders.columnsCustomer')}</th>
+                  <th>{t('orders.columnsItems')}</th>
+                  <th>{t('orders.columnsAmount')}</th>
+                  <th>{t('orders.columnsOrder')}</th>
+                  <th>{t('orders.columnsPayment')}</th>
+                  <th>{t('orders.columnsFulfillment')}</th>
+                  <th>{t('orders.columnsDate')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -146,11 +148,11 @@ function OrdersPage() {
                       </div>
                     </td>
                     <td>{order.itemCount}</td>
-                    <td>{formatMoney(order.grandTotal, order.currencyCode)}</td>
+                    <td>{formatMoney(order.grandTotal, order.currencyCode, intlLocale)}</td>
                     <td><span className="status-pill">{orderStatusLabels[order.orderStatus] ?? 'Unknown'}</span></td>
                     <td><span className="status-pill status-pill--muted">{paymentStatusLabels[order.paymentStatus] ?? 'Unknown'}</span></td>
                     <td><span className="status-pill status-pill--outline">{fulfillmentStatusLabels[order.fulfillmentStatus] ?? 'Unknown'}</span></td>
-                    <td>{new Intl.DateTimeFormat('tr-TR', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(order.createdAt))}</td>
+                    <td>{new Intl.DateTimeFormat(intlLocale, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(order.createdAt))}</td>
                   </tr>
                 ))}
               </tbody>

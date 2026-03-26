@@ -116,6 +116,34 @@
   color: var(--accent);
 }
 
+.app-content__actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.app-language-select {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 180px;
+}
+
+.app-language-select span {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text);
+}
+
+.app-language-select select {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.88);
+  color: var(--text-h);
+}
+
 .app-content__status {
   padding: 12px 14px;
   border-radius: 18px;

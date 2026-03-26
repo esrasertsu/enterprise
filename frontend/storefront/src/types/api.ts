@@ -67,6 +67,16 @@ export interface ProductDetail {
   attributes: ProductAttribute[]
 }
 
+export interface CategoryTreeNode {
+  id: string
+  slug: string
+  name: string
+  description: string | null
+  imageUrl: string | null
+  productCount: number
+  children: CategoryTreeNode[]
+}
+
 export interface QuoteRequestPayload {
   fullName: string
   email: string

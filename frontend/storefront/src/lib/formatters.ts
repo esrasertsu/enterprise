@@ -1,3 +1,5 @@
+import { resolveLeadTimeLabel, resolveNumberLocale } from './locales'
+
 type Translate = (key: string) => string
 
 export function formatCurrency(value: number | null | undefined, languageCode: string): string | null {
@@ -5,9 +7,7 @@ export function formatCurrency(value: number | null | undefined, languageCode: s
     return null
   }
 
-  const locale = languageCode === 'tr' ? 'tr-TR' : 'en-GB'
-
-  return new Intl.NumberFormat(locale, {
+  return new Intl.NumberFormat([resolveNumberLocale(languageCode), 'en-GB'], {
     style: 'currency',
     currency: 'EUR',
     maximumFractionDigits: 2,
@@ -19,7 +19,7 @@ export function formatLeadTime(days: number | null | undefined, languageCode: st
     return null
   }
 
-  return languageCode === 'tr' ? `${days} gun` : `${days} days`
+  return `${days} ${resolveLeadTimeLabel(languageCode)}`
 }
 
 export function formatProductType(productType: number | string, t: Translate): string {
