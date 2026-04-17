@@ -8,6 +8,7 @@ namespace Ecommerce.Application.Checkout;
 public sealed class PublicCheckoutService
 {
     private const decimal DefaultShippingExclVat = 0m;
+    private const string LuxembourgCountryCode = "LU";
 
     private static readonly JsonSerializerOptions SnapshotJsonOptions = new(JsonSerializerDefaults.Web)
     {
@@ -40,9 +41,11 @@ public sealed class PublicCheckoutService
 
         var normalizedEmail = NormalizeEmail(command.Email);
         var billingAddress = NormalizeAddress(command.BillingAddress, nameof(command.BillingAddress));
-        var shippingAddress = command.UseBillingAsShippingAddress
-            ? billingAddress
-            : NormalizeAddress(command.ShippingAddress, nameof(command.ShippingAddress));
+        var shippingAddress = ResolveShippingAddress(
+            billingAddress,
+            command.ShippingAddress,
+            command.UseBillingAsShippingAddress,
+            nameof(command.ShippingAddress));
         var now = DateTime.UtcNow;
 
         var order = new Order
@@ -133,27 +136,34 @@ public sealed class PublicCheckoutService
 
     private static void ValidateCheckoutCommand(CheckoutPreviewCommand command, Cart cart)
     {
-        _ = NormalizeEmail(command.Email);
-        _ = NormalizeAddress(command.BillingAddress, nameof(command.BillingAddress));
-
-        if (!command.UseBillingAsShippingAddress)
-        {
-            _ = NormalizeAddress(command.ShippingAddress, nameof(command.ShippingAddress));
-        }
-
-        ValidateCart(cart);
+        ValidateCheckoutCommand(
+            command.Email,
+            command.BillingAddress,
+            command.ShippingAddress,
+            command.UseBillingAsShippingAddress,
+            cart);
     }
 
     private static void ValidateCheckoutCommand(CreateOrderFromCheckoutCommand command, Cart cart)
     {
-        _ = NormalizeEmail(command.Email);
-        _ = NormalizeAddress(command.BillingAddress, nameof(command.BillingAddress));
+        ValidateCheckoutCommand(
+            command.Email,
+            command.BillingAddress,
+            command.ShippingAddress,
+            command.UseBillingAsShippingAddress,
+            cart);
+    }
 
-        if (!command.UseBillingAsShippingAddress)
-        {
-            _ = NormalizeAddress(command.ShippingAddress, nameof(command.ShippingAddress));
-        }
-
+    private static void ValidateCheckoutCommand(
+        string email,
+        CheckoutAddressInput billingAddress,
+        CheckoutAddressInput? shippingAddress,
+        bool useBillingAsShippingAddress,
+        Cart cart)
+    {
+        _ = NormalizeEmail(email);
+        var normalizedBillingAddress = NormalizeAddress(billingAddress, nameof(billingAddress));
+        _ = ResolveShippingAddress(normalizedBillingAddress, shippingAddress, useBillingAsShippingAddress, nameof(shippingAddress));
         ValidateCart(cart);
     }
 
@@ -214,7 +224,7 @@ public sealed class PublicCheckoutService
         return $"ORD-{datePrefix}-{existingCount + 1:D4}";
     }
 
-    private static object NormalizeAddress(CheckoutAddressInput? address, string fieldName)
+    private static NormalizedCheckoutAddress NormalizeAddress(CheckoutAddressInput? address, string fieldName)
     {
         if (address is null)
         {
@@ -232,18 +242,34 @@ public sealed class PublicCheckoutService
             throw new InvalidOperationException($"{fieldName}.countryCode must be a 2-letter ISO code.");
         }
 
-        return new
+        return new NormalizedCheckoutAddress(
+            contactName,
+            NormalizeOptional(address.CompanyName),
+            line1,
+            NormalizeOptional(address.Line2),
+            postalCode,
+            city,
+            NormalizeOptional(address.State),
+            countryCode,
+            NormalizeOptional(address.Phone));
+    }
+
+    private static NormalizedCheckoutAddress ResolveShippingAddress(
+        NormalizedCheckoutAddress billingAddress,
+        CheckoutAddressInput? shippingAddress,
+        bool useBillingAsShippingAddress,
+        string shippingFieldName)
+    {
+        var normalizedShippingAddress = useBillingAsShippingAddress
+            ? billingAddress
+            : NormalizeAddress(shippingAddress, shippingFieldName);
+
+        if (!string.Equals(normalizedShippingAddress.CountryCode, LuxembourgCountryCode, StringComparison.Ordinal))
         {
-            ContactName = contactName,
-            CompanyName = NormalizeOptional(address.CompanyName),
-            Line1 = line1,
-            Line2 = NormalizeOptional(address.Line2),
-            PostalCode = postalCode,
-            City = city,
-            State = NormalizeOptional(address.State),
-            CountryCode = countryCode,
-            Phone = NormalizeOptional(address.Phone),
-        };
+            throw new InvalidOperationException($"Shipping address countryCode must be {LuxembourgCountryCode}.");
+        }
+
+        return normalizedShippingAddress;
     }
 
     private static string NormalizeEmail(string? email)
@@ -292,4 +318,15 @@ public sealed class PublicCheckoutService
             ? convertedSessionId
             : convertedSessionId[..255];
     }
+
+    private sealed record NormalizedCheckoutAddress(
+        string ContactName,
+        string? CompanyName,
+        string Line1,
+        string? Line2,
+        string PostalCode,
+        string City,
+        string? State,
+        string CountryCode,
+        string? Phone);
 }

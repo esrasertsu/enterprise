@@ -15,6 +15,7 @@ function SiteHeader() {
   const sessionId = getOrCreateCartSessionId()
   const activeLanguage = normalizeStorefrontLanguageCode(i18n.language)
 
+  const isCatalogPage = location.pathname === '/products'
   const isProductsPage = location.pathname.startsWith('/products')
   const isCartPage = location.pathname.startsWith('/cart')
   const cartQuery = useQuery({
@@ -34,9 +35,6 @@ function SiteHeader() {
 
       <nav className="site-nav">
         <NavLink to="/products">{t('nav.products')}</NavLink>
-        <a href="#custom-flow">{t('nav.custom')}</a>
-        <a href="#process">{t('nav.process')}</a>
-        <a href="#reviews">{t('nav.reviews')}</a>
       </nav>
 
       <div className="site-header__actions">

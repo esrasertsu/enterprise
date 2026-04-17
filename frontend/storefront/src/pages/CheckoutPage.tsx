@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { App, Button, Checkbox, Empty, Form, Input, Skeleton, Space, Switch } from 'antd'
+import { App, Button, Checkbox, Empty, Form, Input, Select, Skeleton, Space, Switch } from 'antd'
 import { ArrowLeftOutlined } from '@ant-design/icons'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
@@ -19,6 +19,16 @@ interface CheckoutFormValues {
   useBillingAsShippingAddress: boolean
   billingAddress: CheckoutAddressInput
   shippingAddress: CheckoutAddressInput
+}
+
+const LUXEMBOURG_COUNTRY_CODE = 'LU'
+const LUXEMBOURG_COUNTRY_LABEL = 'Luxembourg'
+
+function withLuxembourgCountry(address: CheckoutAddressInput): CheckoutAddressInput {
+  return {
+    ...address,
+    countryCode: LUXEMBOURG_COUNTRY_CODE,
+  }
 }
 
 function CheckoutPage() {
@@ -88,8 +98,8 @@ function CheckoutPage() {
     return {
       sessionId,
       email: values.email.trim(),
-      billingAddress: values.billingAddress,
-      shippingAddress: values.useBillingAsShippingAddress ? null : values.shippingAddress,
+      billingAddress: withLuxembourgCountry(values.billingAddress),
+      shippingAddress: values.useBillingAsShippingAddress ? null : withLuxembourgCountry(values.shippingAddress),
       useBillingAsShippingAddress: values.useBillingAsShippingAddress,
       vatNumber: values.vatNumber?.trim() || null,
       needsDesignSupport: values.needsDesignSupport,
@@ -157,7 +167,7 @@ function CheckoutPage() {
                 postalCode: '',
                 city: '',
                 state: '',
-                countryCode: 'TR',
+                countryCode: LUXEMBOURG_COUNTRY_CODE,
                 phone: '',
               },
               shippingAddress: {
@@ -168,7 +178,7 @@ function CheckoutPage() {
                 postalCode: '',
                 city: '',
                 state: '',
-                countryCode: 'TR',
+                countryCode: LUXEMBOURG_COUNTRY_CODE,
                 phone: '',
               },
             }}
@@ -220,15 +230,18 @@ function CheckoutPage() {
               <Form.Item label={t('checkout.state')} name={['billingAddress', 'state']}>
                 <Input />
               </Form.Item>
-              <Form.Item label={t('checkout.countryCode')} name={['billingAddress', 'countryCode']} rules={[{ required: true }]}>
-                <Input maxLength={2} />
+              <Form.Item label={t('checkout.country')} name={['billingAddress', 'countryCode']} rules={[{ required: true }]}>
+                <Select
+                  disabled
+                  options={[{ value: LUXEMBOURG_COUNTRY_CODE, label: LUXEMBOURG_COUNTRY_LABEL }]}
+                />
               </Form.Item>
               <Form.Item label={t('checkout.phone')} name={['billingAddress', 'phone']}>
                 <Input />
               </Form.Item>
             </div>
 
-            <Form.Item name="useBillingAsShippingAddress" valuePropName="checked">
+            <Form.Item name="useBillingAsShippingAddress" valuePropName="checked" extra={t('checkout.shippingCountryLockedNote')}>
               <Checkbox>{t('checkout.useBillingAsShippingAddress')}</Checkbox>
             </Form.Item>
 
@@ -260,8 +273,11 @@ function CheckoutPage() {
                   <Form.Item label={t('checkout.state')} name={['shippingAddress', 'state']}>
                     <Input />
                   </Form.Item>
-                  <Form.Item label={t('checkout.countryCode')} name={['shippingAddress', 'countryCode']} rules={[{ required: true }]}>
-                    <Input maxLength={2} />
+                  <Form.Item label={t('checkout.country')} name={['shippingAddress', 'countryCode']} rules={[{ required: true }]}>
+                    <Select
+                      disabled
+                      options={[{ value: LUXEMBOURG_COUNTRY_CODE, label: LUXEMBOURG_COUNTRY_LABEL }]}
+                    />
                   </Form.Item>
                   <Form.Item label={t('checkout.phone')} name={['shippingAddress', 'phone']}>
                     <Input />

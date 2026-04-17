@@ -1,5 +1,5 @@
-import { lazy, Suspense } from 'react'
-import { Navigate, Route, Routes } from 'react-router-dom'
+import { lazy, Suspense, useEffect } from 'react'
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { App as AntApp, ConfigProvider, Spin, theme as antdTheme } from 'antd'
 import deDE from 'antd/locale/de_DE'
 import enUS from 'antd/locale/en_US'
@@ -24,6 +24,16 @@ const antLocales = {
   fr: frFR,
   lb: deDE,
   tr: trTR,
+}
+
+function ScrollToTop() {
+  const location = useLocation()
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
+  }, [location.pathname])
+
+  return null
 }
 
 function App() {
@@ -54,6 +64,7 @@ function App() {
     >
       <AntApp>
         <Suspense fallback={<div className="page-loader"><Spin size="large" /></div>}>
+          <ScrollToTop />
           <div className="site-shell">
             <SiteHeader />
             <main className="site-main">
@@ -67,9 +78,9 @@ function App() {
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
             </main>
-            <SiteFooter />
             <QuoteRequestDrawer />
           </div>
+         <SiteFooter />
         </Suspense>
       </AntApp>
     </ConfigProvider>

@@ -13,10 +13,9 @@ function SiteFooter() {
           <Typography.Paragraph>{t('footer.note')}</Typography.Paragraph>
         </div>
         <Space size="middle" wrap>
-          <Button type="primary" onClick={() => openQuoteDrawer('')}>
+          <Button type="default" onClick={() => openQuoteDrawer('')}>
             {t('common.quote')}
           </Button>
-          <Button href="/products">{t('common.exploreCatalog')}</Button>
         </Space>
       </div>
       <Divider />

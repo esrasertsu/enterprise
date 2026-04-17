@@ -1,7 +1,20 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { AppstoreOutlined, ArrowLeftOutlined, CheckCircleOutlined, MessageOutlined, ShoppingCartOutlined } from '@ant-design/icons'
-import { App, Button, Card, Col, Descriptions, Empty, Image, InputNumber, Row, Select, Skeleton, Space, Tag } from 'antd'
+import {
+  AppstoreOutlined,
+  ArrowLeftOutlined,
+  BgColorsOutlined,
+  CheckCircleOutlined,
+  ClockCircleOutlined,
+  MessageOutlined,
+  SafetyCertificateOutlined,
+  ShoppingCartOutlined,
+  SkinOutlined,
+  TagsOutlined,
+  UnorderedListOutlined,
+  EnvironmentOutlined,
+} from '@ant-design/icons'
+import { App, Button, Card, Col, Empty, Image, InputNumber, Row, Select, Skeleton, Space, Tag } from 'antd'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
 import { addCartItem } from '../lib/api/cart'
@@ -18,8 +31,8 @@ function ProductDetailPage() {
   const queryClient = useQueryClient()
   const { message } = App.useApp()
   const sessionId = getOrCreateCartSessionId()
-  const [selectedVariantId, setSelectedVariantId] = useState<string>('')
-  const [quantity, setQuantity] = useState<number>(1)
+  const [selectedVariantOverride, setSelectedVariantOverride] = useState<string | null>(null)
+  const [quantityOverride, setQuantityOverride] = useState<number | null>(null)
 
   const productQuery = useQuery({
     queryKey: ['product', slug, i18n.language],
@@ -28,21 +41,11 @@ function ProductDetailPage() {
   })
 
   const product = productQuery.data
-
-  useEffect(() => {
-    if (!product) {
-      return
-    }
-
-    setSelectedVariantId((current) => {
-      if (current && product.variants.some((variant) => variant.id === current)) {
-        return current
-      }
-
-      return product.variants[0]?.id ?? ''
-    })
-    setQuantity(product.minOrderQuantity)
-  }, [product])
+  const selectedVariantId =
+    product && selectedVariantOverride && product.variants.some((variant) => variant.id === selectedVariantOverride)
+      ? selectedVariantOverride
+      : product?.variants[0]?.id ?? ''
+  const quantity = product ? Math.max(quantityOverride ?? product.minOrderQuantity, product.minOrderQuantity) : 1
 
   const addToCartMutation = useMutation({
     mutationFn: () => addCartItem({
@@ -82,6 +85,40 @@ function ProductDetailPage() {
   const mainImage = product.images.find((image) => image.isMain) ?? product.images[0]
   const firstPrice = product.variants[0]?.priceExclVat
   const selectedVariant = product.variants.find((variant) => variant.id === selectedVariantId) ?? product.variants[0]
+  const selectedUnitPrice = selectedVariant?.priceExclVat ?? firstPrice
+  const selectedTotal = selectedVariant ? selectedVariant.priceExclVat * quantity : null
+  const factItems = [
+    {
+      key: 'price',
+      icon: <TagsOutlined />,
+      label: t('product.from'),
+      value: formatCurrency(selectedUnitPrice, i18n.language) ?? '—',
+    },
+    {
+      key: 'min-order',
+      icon: <ShoppingCartOutlined />,
+      label: t('product.minOrder'),
+      value: String(product.minOrderQuantity),
+    },
+    {
+      key: 'lead-time',
+      icon: <ClockCircleOutlined />,
+      label: t('product.leadTime'),
+      value: formatLeadTime(product.leadTimeDays, i18n.language) ?? '—',
+    },
+    {
+      key: 'vat-rate',
+      icon: <UnorderedListOutlined />,
+      label: t('cart.vatRate'),
+      value: `${product.baseVatRate}%`,
+    },
+  ]
+  const signalItems = [
+    { key: 'customizable', label: t('product.customizable'), enabled: product.isCustomizable, icon: <SkinOutlined /> },
+    { key: 'artwork', label: t('product.artwork'), enabled: product.requiresArtwork, icon: <BgColorsOutlined /> },
+    { key: 'recyclable', label: t('product.recyclable'), enabled: product.recyclable, icon: <EnvironmentOutlined /> },
+    { key: 'food-safe', label: t('product.foodSafe'), enabled: product.foodSafe, icon: <SafetyCertificateOutlined /> },
+  ]
 
   return (
     <div className="page-stack page-stack--dense">
@@ -106,77 +143,114 @@ function ProductDetailPage() {
             </div>
           </Col>
           <Col xs={24} lg={12}>
-            <Space wrap>
-              <Tag>{product.categoryName}</Tag>
-              <Tag>{formatProductType(product.productType, t)}</Tag>
-            </Space>
-            <h1 className="product-detail-title">{product.name}</h1>
-            <p className="product-detail-summary">{product.shortDescription ?? product.description}</p>
-            <div className="product-detail-price">{formatCurrency(firstPrice, i18n.language) ?? '—'}</div>
-            <div className="product-purchase-panel">
-              <label className="field product-purchase-panel__field">
-                <span>{t('cart.variant')}</span>
-                <Select
-                  value={selectedVariantId}
-                  onChange={setSelectedVariantId}
-                  options={product.variants.map((variant) => ({
-                    value: variant.id,
-                    label: `${variant.sku} · ${formatCurrency(variant.priceExclVat, i18n.language) ?? '—'}`,
-                  }))}
-                />
-              </label>
+            <div className="product-detail-panel">
+              <div className="product-detail-panel__header">
+                <Space wrap>
+                  <Tag>{product.categoryName}</Tag>
+                  <Tag>{formatProductType(product.productType, t)}</Tag>
+                </Space>
+                <h1 className="product-detail-title">{product.name}</h1>
+                <p className="product-detail-summary">{product.shortDescription ?? product.description}</p>
+              </div>
 
-              <label className="field product-purchase-panel__field product-purchase-panel__field--quantity">
-                <span>{t('cart.quantity')}</span>
-                <InputNumber
-                  min={product.minOrderQuantity}
-                  max={product.maxOrderQuantity ?? undefined}
-                  value={quantity}
-                  onChange={(value) => {
-                    if (typeof value === 'number') {
-                      setQuantity(value)
-                    }
-                  }}
-                />
-              </label>
+              <div className="product-detail-facts">
+                {factItems.map((item) => (
+                  <div className="product-detail-fact" key={item.key}>
+                    <span className="product-detail-fact__icon">{item.icon}</span>
+                    <div>
+                      <small>{item.label}</small>
+                      <strong>{item.value}</strong>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="product-order-card">
+                <div className="product-order-card__top">
+                  <div>
+                    <span className="eyebrow">{t('cart.addAction')}</span>
+                    <div className="product-detail-price-row">
+                      <span className="product-detail-price">{formatCurrency(selectedUnitPrice, i18n.language) ?? '—'}</span>
+                      {selectedVariant?.compareAtPriceExclVat ? (
+                        <span className="product-detail-price-compare">
+                          {formatCurrency(selectedVariant.compareAtPriceExclVat, i18n.language)}
+                        </span>
+                      ) : null}
+                    </div>
+                  </div>
+                  <div className="product-order-card__total">
+                    <span>{t('cart.total')}</span>
+                    <strong>{formatCurrency(selectedTotal, i18n.language) ?? '—'}</strong>
+                  </div>
+                </div>
+
+                <div className="product-order-card__controls">
+                  <label className="field product-order-card__field">
+                    <span>{t('cart.variant')}</span>
+                    <Select
+                      value={selectedVariantId}
+                      onChange={setSelectedVariantOverride}
+                      options={product.variants.map((variant) => ({
+                        value: variant.id,
+                        label: `${variant.sku} · ${formatCurrency(variant.priceExclVat, i18n.language) ?? '—'}`,
+                      }))}
+                    />
+                  </label>
+
+                  <label className="field product-order-card__field product-order-card__field--quantity">
+                    <span>{t('cart.quantity')}</span>
+                    <InputNumber
+                      min={product.minOrderQuantity}
+                      max={product.maxOrderQuantity ?? undefined}
+                      value={quantity}
+                      onChange={(value) => {
+                        if (typeof value === 'number') {
+                          setQuantityOverride(value)
+                        }
+                      }}
+                    />
+                  </label>
+                </div>
+
+                <div className="product-order-card__meta">
+                  <div className="product-order-card__meta-row">
+                    <Tag bordered={false}>{selectedVariant?.sku ?? '—'}</Tag>
+                    {selectedVariant?.barcode ? <Tag bordered={false}>{selectedVariant.barcode}</Tag> : null}
+                  </div>
+                  {product.maxOrderQuantity ? (
+                    <span className="product-order-card__limit">{`${product.minOrderQuantity} - ${product.maxOrderQuantity}`}</span>
+                  ) : (
+                    <span className="product-order-card__limit">{`${product.minOrderQuantity}+`}</span>
+                  )}
+                </div>
+
+                <div className="product-order-card__actions">
+                  <Button
+                    type="primary"
+                    size="large"
+                    icon={<ShoppingCartOutlined />}
+                    loading={addToCartMutation.isPending}
+                    onClick={() => addToCartMutation.mutate()}
+                    disabled={!selectedVariant}
+                    block
+                  >
+                    {t('cart.addAction')}
+                  </Button>
+                  <div className="product-order-card__actions-secondary">
+                    <Button type="default" size="large" icon={<MessageOutlined />} onClick={() => openQuoteDrawer(product.name)}>
+                      {t('common.requestForProduct')}
+                    </Button>
+                    <Button size="large" onClick={() => navigate('/cart')}>
+                      {t('cart.viewAction')}
+                    </Button>
+                  </div>
+                  <Button icon={<AppstoreOutlined />} size="large" onClick={() => navigate('/products')}>
+                    {t('common.exploreCatalog')}
+                  </Button>
+                </div>
+              </div>
+
             </div>
-            <Space wrap>
-              <Button
-                type="primary"
-                icon={<ShoppingCartOutlined />}
-                loading={addToCartMutation.isPending}
-                onClick={() => addToCartMutation.mutate()}
-                disabled={!selectedVariant}
-              >
-                {t('cart.addAction')}
-              </Button>
-              <Button type="primary" icon={<MessageOutlined />} onClick={() => openQuoteDrawer(product.name)}>
-                {t('common.requestForProduct')}
-              </Button>
-              <Button onClick={() => navigate('/cart')}>{t('cart.viewAction')}</Button>
-              <Button icon={<AppstoreOutlined />} onClick={() => navigate('/products')}>
-                {t('common.exploreCatalog')}
-              </Button>
-            </Space>
-
-            <Descriptions title={t('product.specifications')} column={1} className="product-specs">
-              <Descriptions.Item label={t('product.minOrder')}>{product.minOrderQuantity}</Descriptions.Item>
-              <Descriptions.Item label={t('product.leadTime')}>
-                {formatLeadTime(product.leadTimeDays, i18n.language) ?? '—'}
-              </Descriptions.Item>
-              <Descriptions.Item label={t('product.customizable')}>
-                {product.isCustomizable ? t('product.yes') : t('product.no')}
-              </Descriptions.Item>
-              <Descriptions.Item label={t('product.artwork')}>
-                {product.requiresArtwork ? t('product.yes') : t('product.no')}
-              </Descriptions.Item>
-              <Descriptions.Item label={t('product.recyclable')}>
-                {product.recyclable ? t('product.yes') : t('product.no')}
-              </Descriptions.Item>
-              <Descriptions.Item label={t('product.foodSafe')}>
-                {product.foodSafe ? t('product.yes') : t('product.no')}
-              </Descriptions.Item>
-            </Descriptions>
           </Col>
         </Row>
       </section>
@@ -185,6 +259,17 @@ function ProductDetailPage() {
         <Col xs={24} lg={14}>
           <Card className="section-card section-card--flush">
             <h2>{t('product.details')}</h2>
+            <div className="product-detail-feature-strip">
+              {signalItems.map((item) => (
+                <div className={`product-detail-feature${item.enabled ? ' product-detail-feature--active' : ''}`} key={item.key}>
+                  <span className="product-detail-feature__icon">{item.icon}</span>
+                  <div>
+                    <strong>{item.label}</strong>
+                    <small>{item.enabled ? t('product.yes') : t('product.no')}</small>
+                  </div>
+                </div>
+              ))}
+            </div>
             <p>{product.description ?? product.shortDescription ?? t('common.noData')}</p>
           </Card>
         </Col>
@@ -226,7 +311,7 @@ function ProductDetailPage() {
                   <span>{t('product.from')}</span>
                   <strong>{formatCurrency(variant.priceExclVat, i18n.language)}</strong>
                 </div>
-                <Button onClick={() => setSelectedVariantId(variant.id)}>{t('cart.selectVariant')}</Button>
+                <Button onClick={() => setSelectedVariantOverride(variant.id)}>{t('cart.selectVariant')}</Button>
               </Card>
             </Col>
           ))}

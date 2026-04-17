@@ -1,4 +1,4 @@
-import { useDeferredValue, useEffect, useMemo, useState } from 'react'
+import { useDeferredValue, useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Button, Card, Col, Empty, Input, Row, Select, Skeleton, Space, Tag } from 'antd'
 import { useTranslation } from 'react-i18next'
@@ -32,10 +32,6 @@ function CatalogPage() {
   const [selectedCategory, setSelectedCategory] = useState(searchParams.get('category') ?? 'all')
   const deferredSearch = useDeferredValue(searchValue)
 
-  useEffect(() => {
-    setSelectedCategory(searchParams.get('category') ?? 'all')
-  }, [searchParams])
-
   const categoriesQuery = useQuery({
     queryKey: ['categories', 'catalog', i18n.language],
     queryFn: () => fetchCategories({ languageCode: i18n.language }),
@@ -49,7 +45,7 @@ function CatalogPage() {
     }),
   })
 
-  const products = productsQuery.data ?? []
+  const products = useMemo(() => productsQuery.data ?? [], [productsQuery.data])
 
   const categories = useMemo(() => {
     const options = flattenCategories(categoriesQuery.data ?? [])
@@ -91,6 +87,10 @@ function CatalogPage() {
     })
   }, [deferredSearch, products, selectedCategory])
 
+  function navigateToProduct(slug: string) {
+    navigate(`/products/${slug}`)
+  }
+
   return (
     <div className="page-stack page-stack--dense">
       <section className="catalog-hero section-card">
@@ -111,14 +111,14 @@ function CatalogPage() {
         </div>
       </section>
 
-      {(categoriesQuery.data ?? []).length > 0 ? (
+     {/*  {(categoriesQuery.data ?? []).length > 0 ? (
         <section className="section-card category-tree-panel">
           <div className="section-heading">
             <span className="eyebrow">{t('categories.title')}</span>
             <p>{t('catalog.description')}</p>
           </div>
 
-          <div className="catalog-category-tree">
+           <div className="catalog-category-tree">
             <button
               type="button"
               className={`catalog-category-pill${selectedCategory === 'all' ? ' catalog-category-pill--active' : ''}`}
@@ -127,7 +127,7 @@ function CatalogPage() {
               <strong>{t('catalog.categoryAll')}</strong>
             </button>
 
-            {(categoriesQuery.data ?? []).map((category) => (
+           {(categoriesQuery.data ?? []).map((category) => (
               <article key={category.id} className="catalog-category-group">
                 <button
                   type="button"
@@ -156,7 +156,7 @@ function CatalogPage() {
             ))}
           </div>
         </section>
-      ) : null}
+      ) : null} */}
 
       {productsQuery.isLoading ? (
         <Row gutter={[20, 20]}>
@@ -174,7 +174,11 @@ function CatalogPage() {
         <Row gutter={[20, 20]}>
           {filteredProducts.map((product) => (
             <Col xs={24} md={12} xl={8} key={product.id}>
-              <Card className="product-card" hoverable>
+              <Card
+                className="product-card"
+                hoverable
+                onClick={() => navigateToProduct(product.slug)}
+              >
                 <div className="product-card__image">
                   {product.mainImageUrl ? (
                     <img src={product.mainImageUrl} alt={product.name} />
@@ -193,10 +197,17 @@ function CatalogPage() {
                   <strong>{formatCurrency(product.minPriceExclVat, i18n.language) ?? '—'}</strong>
                 </div>
                 <div className="product-card__actions">
-                  <Button type="primary" onClick={() => navigate(`/products/${product.slug}`)}>
+                  <Button type="primary" onClick={() => navigateToProduct(product.slug)}>
                     {t('common.shopNow')}
                   </Button>
-                  <Button onClick={() => openQuoteDrawer(product.name)}>{t('common.quote')}</Button>
+                  <Button
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      openQuoteDrawer(product.name)
+                    }}
+                  >
+                    {t('common.quote')}
+                  </Button>
                 </div>
               </Card>
             </Col>
